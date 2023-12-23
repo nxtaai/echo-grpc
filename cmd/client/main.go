@@ -18,7 +18,9 @@ import (
 	"context"
 	"flag"
 	"log"
+	"net"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 	echov1 "github.com/nxtaai/echo-grpc/api/echo/v1"
@@ -26,11 +28,43 @@ import (
 )
 
 func main() {
-	serverAddr := flag.String("addr", "http://localhost:8080", "The server address in the format of scheme://host:port")
+	serverAddr := flag.String(
+		"addr",
+		"http://localhost:8080",
+		"The server address in the format of scheme://host:port",
+	)
 	flag.Parse()
 
-	client := echov1connect.NewEchoAPIClient(http.DefaultClient, *serverAddr, connect.WithGRPC())
-	res, err := client.Echo(context.Background(), connect.NewRequest(&echov1.EchoRequest{Message: "Hello gRPC!"}))
+	client := echov1connect.NewEchoAPIClient(
+		&http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:   10 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).DialContext,
+				ForceAttemptHTTP2:     true,
+				MaxIdleConns:          100,
+				MaxConnsPerHost:       100,
+				MaxIdleConnsPerHost:   100,
+				IdleConnTimeout:       30 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ResponseHeaderTimeout: 10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
+			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+			Timeout: 10 * time.Second,
+		},
+		*serverAddr,
+		connect.WithGRPC(),
+	)
+
+	req := connect.NewRequest(&echov1.EchoRequest{Message: "Hello gRPC!"})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	res, err := client.Echo(ctx, req)
 	if err != nil {
 		log.Fatal(err)
 	}

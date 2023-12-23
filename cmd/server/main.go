@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -46,24 +47,53 @@ func main() {
 		ReadHeaderTimeout: time.Second,
 		ReadTimeout:       5 * time.Second,
 		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       120 * time.Second,
+		IdleTimeout:       15 * time.Second,
 		MaxHeaderBytes:    8 * 1024, // 8KB
 	}
 
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalf("net.Listen: %v", err)
+	}
+	keepAliveListener := tcpKeepAliveListener{ln.(*net.TCPListener)}
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		err := srv.Serve(keepAliveListener)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("HTTP listen and serve: %v", err)
 		}
 	}()
 
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	<-signals
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatalf("HTTP shutdown: %v", err)
 	}
 	log.Println("Server stopped")
+}
+
+// tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
+// connections. It's used by ListenAndServe and ListenAndServeTLS so
+// dead TCP connections (e.g. closing laptop mid-download) eventually
+// go away.
+type tcpKeepAliveListener struct {
+	*net.TCPListener
+}
+
+func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+	tc, err := ln.AcceptTCP()
+	if err != nil {
+		return nil, err
+	}
+	if err := tc.SetKeepAlive(true); err != nil {
+		return nil, err
+	}
+	if err := tc.SetKeepAlivePeriod(30 * time.Second); err != nil {
+		return nil, err
+	}
+	return tc, nil
 }
