@@ -1,0 +1,31 @@
+run:
+  timeout: 3m
+  skip-dirs:
+    - vendor
+  skip-files:
+    - '.*\\.pb\\.go$'
+    - '.*\\.connect\\.go$'
+linters:
+  disable-all: true
+  enable:
+    - dogsled
+    - dupl
+    - errcheck
+    - gofmt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - staticcheck
+    - stylecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+  fast: false
+linters-settings:
+  misspell:
+    locale: US
