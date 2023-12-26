@@ -1,3 +1,6 @@
+.PHONY: check
+check: lint checkgenerate checkbreaking checktidy
+
 .PHONY: lint
 lint:
 	@echo "Running lint"
@@ -25,7 +28,13 @@ checkgenerate:
 	buf generate
 	test -z "$$(git status --porcelain | tee /dev/stderr)"
 
-.PHONY: breaking
-breaking:
-	@echo "Running breaking"
+.PHONY: checkbreaking
+checkbreaking:
+	@echo "Running checkbreaking"
 	buf breaking --against '.git#branch=main'
+
+.PHONY: checktidy
+checktidy:
+	@echo "Running checktidy"
+	go mod tidy
+	test -z "$$(git status --porcelain | tee /dev/stderr)"

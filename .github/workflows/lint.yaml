@@ -18,6 +18,19 @@ permissions:
   pull-requests: read
   checks: write
 jobs:
+  tidy:
+    name: tidy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: false
+      - name: tidy
+        run: make checktidy
   golangci:
     name: golangci-lint
     runs-on: ubuntu-latest
@@ -50,7 +63,7 @@ jobs:
       - name: format
         run: buf format -d --exit-code
       - name: generate
-        run: buf generate && test -z "$(git status --porcelain | tee /dev/stderr)"
+        run: make checkgenerate
   prettier:
     name: prettier
     runs-on: ubuntu-latest
