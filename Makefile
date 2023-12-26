@@ -4,6 +4,7 @@ lint:
 	golangci-lint run
 	buf lint
 	buf format -d --exit-code
+	npx prettier --check .
 
 .PHONY: lintfix
 lintfix:
@@ -11,6 +12,7 @@ lintfix:
 	@echo "Automatically fix some lint errors"
 	golangci-lint run --fix
 	buf format -w
+	npx prettier --write .
 
 .PHONY: generate
 generate:
