@@ -1,7 +1,11 @@
-# This workflow runs golangci-lint when a commit is pushed to the "main" branch
-# or a pull request is opened against the "main" branch.
+# This workflow runs when a commit is pushed to the "main" branch or
+# a pull request is opened against the "main" branch.
+#
+# It uses the golangci-lint to lint the Go code.
+# It uses the Buf CLI to check for formatting issues, breaking changes,
+# and lint the Protobuf files.
 
-name: golangci-lint
+name: lint
 on:
   push:
     branches:
@@ -15,7 +19,7 @@ permissions:
   checks: write
 jobs:
   golangci:
-    name: lint
+    name: golangci-lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,3 +33,21 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: latest
+  buf:
+    name: buf
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Buf
+        uses: bufbuild/buf-setup-action@v1
+      - name: lint
+        uses: bufbuild/buf-lint-action@v1
+      - name: breaking
+        uses: bufbuild/buf-breaking-action@v1
+        with:
+          against: 'https://github.com/nxtaai/echo-grpc.git#branch=main'
+      - name: format
+        run: buf format -d --exit-code
+      - name: generate
+        run: buf generate && test -z "$(git status --porcelain | tee /dev/stderr)"
