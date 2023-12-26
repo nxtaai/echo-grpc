@@ -1,6 +1,6 @@
 module github.com/nxtaai/echo-grpc
 
-go 1.21.5
+go 1.21
 
 require (
 	connectrpc.com/connect v1.13.0
