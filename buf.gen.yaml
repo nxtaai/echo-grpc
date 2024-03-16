@@ -4,9 +4,9 @@ managed:
   go_package_prefix:
     default: github.com/nxtaai/echo-grpc/api
 plugins:
-  - plugin: buf.build/protocolbuffers/go
+  - plugin: buf.build/protocolbuffers/go:v1.33.0
     out: api
     opt: paths=source_relative
-  - plugin: buf.build/connectrpc/go
+  - plugin: buf.build/connectrpc/go:v1.15.0
     out: api
     opt: paths=source_relative
